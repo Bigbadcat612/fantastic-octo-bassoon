@@ -63,7 +63,7 @@ def get_unique_groups(source_group_list, friend_list):
     #возвращает список уникальных айди групп
     return unique_groups
 
-
+print('Получаю список групп и друзей...')
 user_subscriptions = make_request([ID], 'groups.get', 'members_count', 1)
 user_friends = make_request([ID], 'friends.get')
 unique_ids = get_unique_groups(user_subscriptions, user_friends)
