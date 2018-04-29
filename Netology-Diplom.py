@@ -11,47 +11,36 @@ with open('config.json', 'r') as f:
     TOKEN = data["TOKEN"]
 
 URL = 'vk.com/'
-APICALL_COUNT = 0
 
 
-def get_user_subscriptions(id, is_extended = 1):
+def make_request(user_ids, method_name, fields='', is_extended=1):
+    default = {'response': {'items': [{'id': 0}]}} #словарь по умолчанию, чтобы возвращать его в случае ошибок
+
     params = dict(
-        access_token = TOKEN,
-        v = V,
-        user_id = id,
-        extended = is_extended,
-        fields = 'members_count'
-    )
+            access_token=TOKEN,
+            v=V,
+            extended=is_extended,
+            fields=fields)
 
-    global APICALL_COUNT
-    APICALL_COUNT += 1
-    print('Делаю запрос #{} к API VK'.format(APICALL_COUNT))
+    for user_id in user_ids:
+        params['user_id'] = user_id
 
-    subscriptions = requests.get('https://api.vk.com/method/groups.get', params).json()
+        result = requests.get(
+            'https://api.vk.com/method/{}'.format(method_name), params).json()
 
-    try:
-        return subscriptions['response']['items']
-    except KeyError:
-        error_code = subscriptions['error']['error_code']
-        print('Невозможно получить информацию с id{}. Код ошибки: {}'.format(id, error_code))
+        while 'error' in result:
+            error_code = result['error']['error_code']
+            if error_code == 6:
+                print('Сбавляю скорость')
+                time.sleep(0.5)
+                result = requests.get('https://api.vk.com/method/{}'.format(method_name), params).json()
 
-        return {'id': 0}
+            else:
+                print('Невозможно подключиться к id{}. Код ошибки:{}'.format(user_id, error_code))
+                return default
 
-
-def get_user_friends(id):
-    params = dict(
-        token = TOKEN,
-        v = V,
-        user_id = id,
-    )
-
-    global APICALL_COUNT
-    APICALL_COUNT += 1
-    print('Делаю запрос #{} к API VK'.format(APICALL_COUNT))
-
-    friends_ids = requests.get('https://api.vk.com/method/friends.get', params).json()
-
-    return friends_ids['response']['items']
+        else:
+            return result['response']['items']
 
 
 def get_unique_groups(source_group_list, friend_list):
@@ -60,14 +49,14 @@ def get_unique_groups(source_group_list, friend_list):
     unique_groups = source_ids
     calls_left = len(friend_list)
 
-    for id in source_group_list:
-        source_ids.add(id['id'])
+    for user_id in source_group_list:
+        source_ids.add(user_id['id'])
 
-    for id in friend_list:
-        print('Осталось: {}'.format(calls_left))
+    for user_id in friend_list:
+        print('Делаю запрос к API VK id{}. Осталось: {}'.format(user_id, calls_left))
         calls_left -= 1
-        current_id_groups = set(get_user_subscriptions(id, 0))
-        time.sleep(0.3)
+        current_id_groups = set(
+            make_request([user_id], 'groups.get', is_extended=0))
 
         unique_groups = unique_groups - current_id_groups
 
@@ -75,26 +64,23 @@ def get_unique_groups(source_group_list, friend_list):
     return unique_groups
 
 
-user_subscriptions = get_user_subscriptions(ID)
-user_friends = get_user_friends(ID)
+user_subscriptions = make_request([ID], 'groups.get', 'members_count', 1)
+user_friends = make_request([ID], 'friends.get')
 unique_ids = get_unique_groups(user_subscriptions, user_friends)
 
 user_subscriptions_unique = list(filter(lambda x: x['id'] in unique_ids, user_subscriptions))
 
 output_file = []
 
-
 for group in user_subscriptions_unique:
-    output_file.append(dict(
-        name = group['name'],
-        gid = group['id'],
-        members_count = group['members_count']
-    )
-    )
+    output_file.append(
+        dict(
+            name=group['name'],
+            gid=group['id'],
+            members_count=group['members_count']))
 
 with open('result.json', 'w') as fp:
     json.dump(output_file, fp)
-
 
 with open('result.json', 'r') as fp:
     data = json.load(fp)
