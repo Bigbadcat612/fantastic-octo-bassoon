@@ -12,25 +12,26 @@ with open('config.json', 'r') as f:
 
 ERROR_CODE = 0
 
-PARAMS = dict(access_token=TOKEN, v=V, extended=1, fields='')
+PARAMS = dict(
+    access_token=TOKEN,
+    v=V,
+    extended=1,
+    fields=''
+    )
 
 
 def make_request(method_name, params):
-    result = requests.get('https://api.vk.com/method/{}'.format(method_name),
-                          params).json()
+    result = requests.get('https://api.vk.com/method/{}'.format(method_name), params).json()
 
     while 'error' in result:
         ERROR_CODE = result['error']['error_code']
         if ERROR_CODE == 6:
             print('Сбавляю скорость')
             time.sleep(1)
-            result = requests.get(
-                'https://api.vk.com/method/{}'.format(method_name),
-                params).json()
+            result = requests.get('https://api.vk.com/method/{}'.format(method_name), params).json()
 
         else:
-            print('Невозможно совершить операцию. Код ошибки:{}'.format(
-                ERROR_CODE))
+            print('Невозможно совершить операцию. Код ошибки:{}'.format(ERROR_CODE))
             return result  #вернет ответ сервера вк с описанием ошибки в виде json-словаря
 
     else:
