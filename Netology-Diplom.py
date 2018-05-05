@@ -10,65 +10,77 @@ with open('config.json', 'r') as f:
     ID = data["ID"]
     TOKEN = data["TOKEN"]
 
-URL = 'vk.com/'
+ERROR_CODE = 0
+
+PARAMS = dict(access_token=TOKEN, v=V, extended=1, fields='')
 
 
-def make_request(user_ids, method_name, fields='', is_extended=1):
-    default = {'response': {'items': [{'id': 0}]}} #словарь по умолчанию, чтобы возвращать его в случае ошибок
+def make_request(method_name, params):
+    result = requests.get('https://api.vk.com/method/{}'.format(method_name),
+                          params).json()
 
-    params = dict(
-            access_token=TOKEN,
-            v=V,
-            extended=is_extended,
-            fields=fields)
-
-    for user_id in user_ids:
-        params['user_id'] = user_id
-
-        result = requests.get(
-            'https://api.vk.com/method/{}'.format(method_name), params).json()
-
-        while 'error' in result:
-            error_code = result['error']['error_code']
-            if error_code == 6:
-                print('Сбавляю скорость')
-                time.sleep(0.5)
-                result = requests.get('https://api.vk.com/method/{}'.format(method_name), params).json()
-
-            else:
-                print('Невозможно подключиться к id{}. Код ошибки:{}'.format(user_id, error_code))
-                return default
+    while 'error' in result:
+        ERROR_CODE = result['error']['error_code']
+        if ERROR_CODE == 6:
+            print('Сбавляю скорость')
+            time.sleep(1)
+            result = requests.get(
+                'https://api.vk.com/method/{}'.format(method_name),
+                params).json()
 
         else:
-            return result['response']['items']
+            print('Невозможно совершить операцию. Код ошибки:{}'.format(
+                ERROR_CODE))
+            return result  #вернет ответ сервера вк с описанием ошибки в виде json-словаря
+
+    else:
+        return result
 
 
 def get_unique_groups(source_group_list, friend_list):
-    non_unique_groups = set()
-    source_ids = set()
-    unique_groups = source_ids
+
+    PARAMS['extended'] = 0
+
+    unique_groups = set()
+    friends_ids = list()
     calls_left = len(friend_list)
 
-    for user_id in source_group_list:
-        source_ids.add(user_id['id'])
+    for group in source_group_list:
+        unique_groups.add(group['id'])
 
-    for user_id in friend_list:
-        print('Делаю запрос к API VK id{}. Осталось: {}'.format(user_id, calls_left))
+    for friend in friend_list:
+        friends_ids.append(friend['id'])
+
+    for friend_id in friends_ids:
+        PARAMS['user_id'] = friend_id
+        print('Делаю запрос к API VK id{}. Осталось: {}'.format(
+            friend_id, calls_left))
         calls_left -= 1
-        current_id_groups = set(
-            make_request([user_id], 'groups.get', is_extended=0))
 
-        unique_groups = unique_groups - current_id_groups
+        try:
+            current_id_groups = make_request('groups.get', PARAMS)['response']['items']
+        except KeyError as e:
+            current_id_groups = set()  #значение по умолчанию, возвращаемое в случае ошибок
+
+        unique_groups = unique_groups - set(current_id_groups)
 
     #возвращает список уникальных айди групп
     return unique_groups
 
+
 print('Получаю список групп и друзей...')
-user_subscriptions = make_request([ID], 'groups.get', 'members_count', 1)
-user_friends = make_request([ID], 'friends.get')
+
+PARAMS['extended'] = 1
+PARAMS['fields'] = 'members_count'
+PARAMS['user_id'] = ID
+user_subscriptions = make_request('groups.get', PARAMS)['response']['items']
+
+PARAMS['extended'] = 0
+user_friends = make_request('friends.get', PARAMS)['response']['items']
 unique_ids = get_unique_groups(user_subscriptions, user_friends)
 
-user_subscriptions_unique = list(filter(lambda x: x['id'] in unique_ids, user_subscriptions))
+user_subscriptions_unique = list(
+    filter(lambda x: x['id'] in unique_ids, user_subscriptions))
 
 output_file = []
 
@@ -81,6 +93,3 @@ for group in user_subscriptions_unique:
 
 with open('result.json', 'w') as fp:
     json.dump(output_file, fp)
-
-with open('result.json', 'r') as fp:
-    data = json.load(fp)
