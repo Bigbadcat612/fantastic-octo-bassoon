@@ -10,26 +10,25 @@ with open('config.json', 'r') as f:
     ID = data["ID"]
     TOKEN = data["TOKEN"]
 
-ERROR_CODE = 0
 
 def make_request(method_name, params):
     base_params = dict(
-    access_token=TOKEN,
-    v=V,
+    access_token = TOKEN,
+    v = V,
     )
 
     params.update(base_params)
     result = requests.get('https://api.vk.com/method/{}'.format(method_name), params).json()
 
     while 'error' in result:
-        ERROR_CODE = result['error']['error_code']
-        if ERROR_CODE == 6:
+        error_code = result['error']['error_code']
+        if error_code == 6:
             print('Сбавляю скорость')
             time.sleep(1)
             result = requests.get('https://api.vk.com/method/{}'.format(method_name), params).json()
 
         else:
-            print('Невозможно совершить операцию. Код ошибки:{}'.format(ERROR_CODE))
+            print('Невозможно совершить операцию. Код ошибки:{}'.format(error_code))
             return result  #вернет ответ сервера вк с описанием ошибки в виде json-словаря
 
     else:
@@ -64,21 +63,19 @@ def get_unique_groups(source_group_list, friend_list):
 print('Получаю список групп и друзей...')
 
 user_params = dict(
-    user_id = ID,
-    fields = 'members_count',
-    extended = 1
+    user_id=ID,
+    fields='members_count',
+    extended=1
     )
 user_subscriptions = make_request('groups.get', user_params)['response']['items']
 
 user_friends_params = dict(
-    user_id = ID
+    user_id=ID
     )
 user_friends = make_request('friends.get', user_friends_params)['response']['items']
-print(user_friends)
 unique_ids = get_unique_groups(user_subscriptions, user_friends)
 
-user_subscriptions_unique = list(
-    filter(lambda x: x['id'] in unique_ids, user_subscriptions))
+user_subscriptions_unique = list(filter(lambda x: x['id'] in unique_ids, user_subscriptions))
 
 output_file = []
 
