@@ -13,8 +13,8 @@ with open('config.json', 'r') as f:
 
 def make_request(method_name, params):
     base_params = dict(
-    access_token = TOKEN,
-    v = V,
+    access_token=TOKEN,
+    v=V,
     )
 
     params.update(base_params)
@@ -29,7 +29,7 @@ def make_request(method_name, params):
 
         else:
             print('Невозможно совершить операцию. Код ошибки:{}'.format(error_code))
-            return result  #вернет ответ сервера вк с описанием ошибки в виде json-словаря
+            return result  # вернет ответ сервера вк с описанием ошибки в виде json-словаря
 
     else:
         return result
@@ -43,20 +43,18 @@ def get_unique_groups(source_group_list, friend_list):
         unique_groups.add(group['id'])
 
     for friend_id in friend_list:
-        friend_groups_params = dict(
-            user_id = friend_id
-            )
+        friend_groups_params = dict(user_id=friend_id)
         print('Делаю запрос к API VK id{}. Осталось: {}'.format(friend_id, calls_left))
         calls_left -= 1
 
         try:
             current_id_groups = make_request('groups.get', friend_groups_params)['response']['items']
         except KeyError as e:
-            current_id_groups = set()  #значение по умолчанию, возвращаемое в случае ошибок
+            current_id_groups = set()  # значение по умолчанию, возвращаемое в случае ошибок
 
         unique_groups = unique_groups - set(current_id_groups)
 
-    #возвращает список уникальных айди групп
+    # возвращает список уникальных айди групп
     return unique_groups
 
 
@@ -67,15 +65,13 @@ user_params = dict(
     fields='members_count',
     extended=1
     )
-user_subscriptions = make_request('groups.get', user_params)['response']['items']
+user_subscriptions = make_request('groups.get', user_params)
 
-user_friends_params = dict(
-    user_id=ID
-    )
-user_friends = make_request('friends.get', user_friends_params)['response']['items']
-unique_ids = get_unique_groups(user_subscriptions, user_friends)
+user_friends_params = dict(user_id=ID)
+user_friends = make_request('friends.get', user_friends_params)
+unique_ids = get_unique_groups(user_subscriptions['response']['items'], user_friends['response']['items'])
 
-user_subscriptions_unique = list(filter(lambda x: x['id'] in unique_ids, user_subscriptions))
+user_subscriptions_unique = list(filter(lambda x: x['id'] in unique_ids, user_subscriptions['response']['items']))
 
 output_file = []
 
