@@ -66,7 +66,7 @@ user_params = dict(
     user_id=ID,
     fields='members_count',
     extended=1
-    )
+)
 user_subscriptions = make_request('groups.get', user_params)
 
 user_friends_params = dict(user_id=ID)
