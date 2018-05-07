@@ -12,6 +12,7 @@ with open('config.json', 'r') as f:
 
 TOO_MANY_REQUESTS = 6
 
+
 def make_request(method_name, params):
     base_params = dict(
     access_token=TOKEN,
