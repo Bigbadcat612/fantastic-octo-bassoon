@@ -10,6 +10,7 @@ with open('config.json', 'r') as f:
     ID = data["ID"]
     TOKEN = data["TOKEN"]
 
+TOO_MANY_REQUESTS = 6
 
 def make_request(method_name, params):
     base_params = dict(
@@ -22,7 +23,7 @@ def make_request(method_name, params):
 
     while 'error' in result:
         error_code = result['error']['error_code']
-        if error_code == 6:
+        if error_code == TOO_MANY_REQUESTS:
             print('Сбавляю скорость')
             time.sleep(1)
             result = requests.get('https://api.vk.com/method/{}'.format(method_name), params).json()
