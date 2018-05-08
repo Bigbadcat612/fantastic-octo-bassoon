@@ -15,8 +15,8 @@ TOO_MANY_REQUESTS = 6
 
 def make_request(method_name, params):
     base_params = dict(
-    access_token=TOKEN,
-    v=V,
+        access_token=TOKEN,
+        v=V,
     )
 
     params.update(base_params)
@@ -82,7 +82,8 @@ for group in user_subscriptions_unique:
         dict(
             name=group['name'],
             gid=group['id'],
-            members_count=group['members_count']))
+            members_count=group['members_count'])
+        )
 
 with open('result.json', 'w') as fp:
     json.dump(output_file, fp)
